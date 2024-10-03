@@ -2,7 +2,7 @@ const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 
 const Variant = union(enum) {
-    bool: bool,
+    boolean: bool,
     int: i32,
     uint: u32,
     double: f64,
@@ -10,7 +10,7 @@ const Variant = union(enum) {
 
     fn factory(comptime T: type, value: T) Variant {
         const variant: Variant = switch (T) {
-            bool => .{ .bool = value },
+            bool => .{ .boolean = value },
             i32 => .{ .int = value },
             u32 => .{ .uint = value },
             f64 => .{ .double = value },
@@ -22,21 +22,21 @@ const Variant = union(enum) {
 
     fn zig_type(self: Variant) []const u8 {
         return switch (self) {
-            Variant.bool => "bool",
-            Variant.int => "i32",
-            Variant.uint => "u32",
-            Variant.double => "f64",
-            Variant.string => "[]const u8",
+            .boolean => "bool",
+            .int => "i32",
+            .uint => "u32",
+            .double => "f64",
+            .string => "[]const u8",
         };
     }
 
     fn dump(self: Variant) !void {
         switch (self) {
-            Variant.bool => |value| try stdout.print("{s}", .{if (value) "true" else "false"}),
-            Variant.int => |value| try stdout.print("{d}", .{value}),
-            Variant.uint => |value| try stdout.print("{d}", .{value}),
-            Variant.double => |value| try stdout.print("{d}", .{value}),
-            Variant.string => |value| try stdout.print("\"{s}\"", .{value}),
+            .boolean => |value| try stdout.writeAll(if (value) "true" else "false"),
+            .int => |value| try stdout.print("{d}", .{value}),
+            .uint => |value| try stdout.print("{d}", .{value}),
+            .double => |value| try stdout.print("{d}", .{value}),
+            .string => |value| try stdout.print("\"{s}\"", .{value}),
         }
     }
 };
