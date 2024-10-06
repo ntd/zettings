@@ -9,7 +9,7 @@ const Variant = union(enum) {
     string: []const u8,
 
     fn factory(comptime T: type, value: T) Variant {
-        const variant: Variant = switch (T) {
+        return switch (T) {
             bool => .{ .boolean = value },
             i32 => .{ .int = value },
             u32 => .{ .uint = value },
@@ -17,7 +17,6 @@ const Variant = union(enum) {
             []const u8 => .{ .string = value },
             else => unreachable(),
         };
-        return variant;
     }
 
     fn zig_type(self: Variant) []const u8 {
@@ -47,12 +46,11 @@ const Setting = struct {
     default: Variant,
 
     fn factory(name: []const u8, description: []const u8, comptime T: type, default: T) Setting {
-        const setting: Setting = .{
+        return .{
             .name = name,
             .description = description,
             .default = Variant.factory(T, default),
         };
-        return setting;
     }
 
     fn dump(self: Setting) !void {
@@ -71,11 +69,10 @@ const Schema = struct {
     settings: []const Setting,
 
     fn factory(filename: []const u8, settings: []const Setting) Schema {
-        const schema: Schema = .{
+        return .{
             .filename = filename,
             .settings = settings,
         };
-        return schema;
     }
 
     fn dump(self: Schema) !void {
