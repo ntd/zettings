@@ -1,6 +1,12 @@
 const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 
+fn writeAllQuoted(writer: anytype, string: []const u8) !void {
+    try writer.writeByte('"');
+    try writer.writeAll(string);
+    try writer.writeByte('"');
+}
+
 const Variant = union(enum) {
     boolean: bool,
     int: i32,
@@ -13,7 +19,7 @@ const Variant = union(enum) {
         switch (self) {
             .boolean => |value| try writer.writeAll(if (value) "true" else "false"),
             inline .int, .uint, .double => |value| try writer.print("{d}", .{value}),
-            .string => |value| try writer.print("\"{s}\"", .{value}),
+            .string => |value| try writeAllQuoted(writer, value),
         }
         try writer.writeAll(" }");
     }
