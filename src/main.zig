@@ -7,6 +7,16 @@ const Variant = union(enum) {
     uint: u32,
     double: f64,
     string: []const u8,
+
+    fn serialize(self: Variant, writer: anytype) !void {
+        try writer.print("Variant{{ .{s} = ", .{@tagName(self)});
+        switch (self) {
+            .boolean => |value| try writer.writeAll(if (value) "true" else "false"),
+            inline .int, .uint, .double => |value| try writer.print("{d}", .{value}),
+            .string => |value| try writer.print("\"{s}\"", .{value}),
+        }
+        try writer.writeAll(" }");
+    }
 };
 
 const Setting = struct {
@@ -29,7 +39,12 @@ const Schema = struct {
     fn dump(self: Schema) !void {
         try stdout.writeAll("const settings = [_]Settings{\n");
         for (self.settings) |setting| {
-            try stdout.print("    .{{ \"{s}\", \"{s}\", {any} }},\n", setting);
+            try stdout.print("    .{{ \"{s}\", \"{s}\", ", .{
+                setting[0],
+                setting[1],
+            });
+            try setting[2].serialize(stdout);
+            try stdout.writeAll(" },\n");
         }
         try stdout.writeAll("};\n");
     }
