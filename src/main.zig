@@ -1,10 +1,24 @@
 const std = @import("std");
 const stdout = std.io.getStdOut().writer();
+const testing = std.testing;
 
 fn writeAllQuoted(writer: anytype, string: []const u8) !void {
     try writer.writeByte('"');
     try writer.writeAll(string);
     try writer.writeByte('"');
+}
+
+test "writeAllQuoted" {
+    var buffer = std.ArrayList(u8).init(testing.allocator);
+    defer buffer.deinit();
+
+    try writeAllQuoted(buffer.writer(), "string");
+    try testing.expectEqualStrings(buffer.items, "\"string\"");
+    buffer.clearRetainingCapacity();
+
+    try writeAllQuoted(buffer.writer(), "");
+    try testing.expectEqualStrings(buffer.items, "\"\"");
+    buffer.clearRetainingCapacity();
 }
 
 const Variant = union(enum) {
@@ -24,6 +38,39 @@ const Variant = union(enum) {
         try writer.writeAll(" }");
     }
 };
+
+test "Variant.serialize" {
+    var buffer = std.ArrayList(u8).init(testing.allocator);
+    defer buffer.deinit();
+
+    try (Variant{ .boolean = true }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .boolean = true }");
+    buffer.clearRetainingCapacity();
+
+    try (Variant{ .boolean = false }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .boolean = false }");
+    buffer.clearRetainingCapacity();
+
+    try (Variant{ .int = 0 }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .int = 0 }");
+    buffer.clearRetainingCapacity();
+
+    try (Variant{ .int = -123 }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .int = -123 }");
+    buffer.clearRetainingCapacity();
+
+    try (Variant{ .uint = 84200 }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .uint = 84200 }");
+    buffer.clearRetainingCapacity();
+
+    try (Variant{ .double = -2.400 }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .double = -2.4 }");
+    buffer.clearRetainingCapacity();
+
+    try (Variant{ .string = "string" }).serialize(buffer.writer());
+    try testing.expectEqualStrings(buffer.items, "Variant{ .string = \"string\" }");
+    buffer.clearRetainingCapacity();
+}
 
 const Setting = struct {
     []const u8, // Name
