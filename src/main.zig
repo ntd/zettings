@@ -32,9 +32,7 @@ const Variant = union(enum) {
     fn dump(self: Variant) !void {
         switch (self) {
             .boolean => |value| try stdout.writeAll(if (value) "true" else "false"),
-            .int => |value| try stdout.print("{d}", .{value}),
-            .uint => |value| try stdout.print("{d}", .{value}),
-            .double => |value| try stdout.print("{d}", .{value}),
+            inline .int, .uint, .double => |value| try stdout.print("{d}", .{value}),
             .string => |value| try stdout.print("\"{s}\"", .{value}),
         }
     }
