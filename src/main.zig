@@ -2,22 +2,44 @@ const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 const testing = std.testing;
 
-fn writeAllQuoted(writer: anytype, string: []const u8) !void {
-    try writer.writeByte('"');
-    try writer.writeAll(string);
-    try writer.writeByte('"');
+fn writeValue(writer: anytype, value: anytype) !void {
+    switch (@typeInfo(@TypeOf(value))) {
+        .Bool => try writer.writeAll(if (value) "true" else "false"),
+        .Int, .Float, .ComptimeInt, .ComptimeFloat => try writer.print("{d}", .{value}),
+        else => {
+            try writer.writeByte('"');
+            try writer.writeAll(value);
+            try writer.writeByte('"');
+        },
+    }
 }
 
-test "writeAllQuoted" {
+test "writeValue" {
     var buffer = std.ArrayList(u8).init(testing.allocator);
     defer buffer.deinit();
 
-    try writeAllQuoted(buffer.writer(), "string");
+    try writeValue(buffer.writer(), "string");
     try testing.expectEqualStrings(buffer.items, "\"string\"");
     buffer.clearRetainingCapacity();
 
-    try writeAllQuoted(buffer.writer(), "");
+    try writeValue(buffer.writer(), "");
     try testing.expectEqualStrings(buffer.items, "\"\"");
+    buffer.clearRetainingCapacity();
+
+    try writeValue(buffer.writer(), false);
+    try testing.expectEqualStrings(buffer.items, "false");
+    buffer.clearRetainingCapacity();
+
+    try writeValue(buffer.writer(), true);
+    try testing.expectEqualStrings(buffer.items, "true");
+    buffer.clearRetainingCapacity();
+
+    try writeValue(buffer.writer(), 1.234);
+    try testing.expectEqualStrings(buffer.items, "1.234");
+    buffer.clearRetainingCapacity();
+
+    try writeValue(buffer.writer(), -42);
+    try testing.expectEqualStrings(buffer.items, "-42");
     buffer.clearRetainingCapacity();
 }
 
@@ -31,9 +53,7 @@ const Variant = union(enum) {
     fn serialize(self: Variant, writer: anytype) !void {
         try writer.print("Variant{{ .{s} = ", .{@tagName(self)});
         switch (self) {
-            .boolean => |value| try writer.writeAll(if (value) "true" else "false"),
-            inline .int, .uint, .double => |value| try writer.print("{d}", .{value}),
-            .string => |value| try writeAllQuoted(writer, value),
+            inline else => |value| try writeValue(writer, value),
         }
         try writer.writeAll(" }");
     }
