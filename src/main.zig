@@ -2,10 +2,27 @@ const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 const testing = std.testing;
 
+const Variant = union(enum) {
+    boolean: bool,
+    int: i32,
+    uint: u32,
+    double: f64,
+    string: []const u8,
+};
+
 fn writeValue(writer: anytype, value: anytype) !void {
     switch (@typeInfo(@TypeOf(value))) {
         .Bool => try writer.writeAll(if (value) "true" else "false"),
         .Int, .Float, .ComptimeInt, .ComptimeFloat => try writer.print("{d}", .{value}),
+        .Union => { // The value is supposedly a `Variant`
+            try writer.writeAll("Variant{ .");
+            try writer.writeAll(@tagName(value));
+            try writer.writeAll(" = ");
+            switch (value) {
+                inline else => |payload| try writeValue(writer, payload),
+            }
+            try writer.writeAll(" }");
+        },
         else => {
             try writer.writeByte('"');
             try writer.writeAll(value);
@@ -18,76 +35,57 @@ test "writeValue" {
     var buffer = std.ArrayList(u8).init(testing.allocator);
     defer buffer.deinit();
 
-    try writeValue(buffer.writer(), "string");
+    const writer = buffer.writer();
+
+    try writeValue(writer, "string");
     try testing.expectEqualStrings(buffer.items, "\"string\"");
     buffer.clearRetainingCapacity();
 
-    try writeValue(buffer.writer(), "");
+    try writeValue(writer, "");
     try testing.expectEqualStrings(buffer.items, "\"\"");
     buffer.clearRetainingCapacity();
 
-    try writeValue(buffer.writer(), false);
+    try writeValue(writer, false);
     try testing.expectEqualStrings(buffer.items, "false");
     buffer.clearRetainingCapacity();
 
-    try writeValue(buffer.writer(), true);
+    try writeValue(writer, true);
     try testing.expectEqualStrings(buffer.items, "true");
     buffer.clearRetainingCapacity();
 
-    try writeValue(buffer.writer(), 1.234);
+    try writeValue(writer, 1.234);
     try testing.expectEqualStrings(buffer.items, "1.234");
     buffer.clearRetainingCapacity();
 
-    try writeValue(buffer.writer(), -42);
+    try writeValue(writer, -42);
     try testing.expectEqualStrings(buffer.items, "-42");
     buffer.clearRetainingCapacity();
-}
 
-const Variant = union(enum) {
-    boolean: bool,
-    int: i32,
-    uint: u32,
-    double: f64,
-    string: []const u8,
-
-    fn serialize(self: Variant, writer: anytype) !void {
-        try writer.print("Variant{{ .{s} = ", .{@tagName(self)});
-        switch (self) {
-            inline else => |value| try writeValue(writer, value),
-        }
-        try writer.writeAll(" }");
-    }
-};
-
-test "Variant.serialize" {
-    var buffer = std.ArrayList(u8).init(testing.allocator);
-    defer buffer.deinit();
-
-    try (Variant{ .boolean = true }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .boolean = true });
     try testing.expectEqualStrings(buffer.items, "Variant{ .boolean = true }");
     buffer.clearRetainingCapacity();
 
-    try (Variant{ .boolean = false }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .boolean = false });
     try testing.expectEqualStrings(buffer.items, "Variant{ .boolean = false }");
     buffer.clearRetainingCapacity();
 
-    try (Variant{ .int = 0 }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .int = 0 });
     try testing.expectEqualStrings(buffer.items, "Variant{ .int = 0 }");
     buffer.clearRetainingCapacity();
 
-    try (Variant{ .int = -123 }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .int = -123 });
     try testing.expectEqualStrings(buffer.items, "Variant{ .int = -123 }");
     buffer.clearRetainingCapacity();
 
-    try (Variant{ .uint = 84200 }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .uint = 84200 });
     try testing.expectEqualStrings(buffer.items, "Variant{ .uint = 84200 }");
     buffer.clearRetainingCapacity();
 
-    try (Variant{ .double = -2.400 }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .double = -2.400 });
     try testing.expectEqualStrings(buffer.items, "Variant{ .double = -2.4 }");
     buffer.clearRetainingCapacity();
 
-    try (Variant{ .string = "string" }).serialize(buffer.writer());
+    try writeValue(writer, Variant{ .string = "string" });
     try testing.expectEqualStrings(buffer.items, "Variant{ .string = \"string\" }");
     buffer.clearRetainingCapacity();
 }
@@ -109,17 +107,18 @@ const Schema = struct {
         };
     }
 
-    fn dump(self: Schema) !void {
-        try stdout.writeAll("const settings = [_]Settings{\n");
+    fn dump(self: Schema, writer: anytype) !void {
+        try writer.writeAll("const settings = [_]Settings{\n");
         for (self.settings) |setting| {
-            try stdout.print("    .{{ \"{s}\", \"{s}\", ", .{
-                setting[0],
-                setting[1],
-            });
-            try setting[2].serialize(stdout);
-            try stdout.writeAll(" },\n");
+            try writer.writeAll("    .{ ");
+            try writeValue(writer, setting[0]);
+            try writer.writeAll(", ");
+            try writeValue(writer, setting[1]);
+            try writer.writeAll(", ");
+            try writeValue(writer, setting[2]);
+            try writer.writeAll(" },\n");
         }
-        try stdout.writeAll("};\n");
+        try writer.writeAll("};\n");
     }
 };
 
@@ -137,5 +136,5 @@ pub fn main() !void {
         .{ "String", "Generic string value", Variant{ .string = "String" } },
     };
     const schema = Schema.factory("testfile", &settings);
-    try schema.dump();
+    try schema.dump(stdout);
 }
