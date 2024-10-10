@@ -108,7 +108,7 @@ const Schema = struct {
     }
 
     fn dump(self: Schema, writer: anytype) !void {
-        try writer.writeAll("const settings = [_]Settings{\n");
+        try writer.writeAll("const settings = .{\n");
         for (self.settings) |setting| {
             try writer.writeAll("    .{ ");
             try writeValue(writer, setting[0]);
@@ -123,7 +123,7 @@ const Schema = struct {
 };
 
 pub fn main() !void {
-    const settings = [_]Setting{
+    const settings = .{
         .{ "Bool_true", "True value", Variant{ .boolean = true } },
         .{ "Bool_false", "False value", Variant{ .boolean = false } },
         .{ "I32_12", "12 signed 32 bits", Variant{ .int = 123 } },
