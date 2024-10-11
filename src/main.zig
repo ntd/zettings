@@ -6,8 +6,18 @@ const Variant = union(enum) {
     boolean: bool,
     int: i32,
     uint: u32,
-    double: f64,
+    float: f64,
     string: []const u8,
+
+    fn factory(comptime T: type, value: anytype) Variant {
+        return switch (T) {
+            bool => Variant{ .boolean = value },
+            i8, i16, i32 => Variant{ .int = value },
+            u8, u16, u32 => Variant{ .uint = value },
+            f16, f32, f64 => Variant{ .float = value },
+            else => Variant{ .string = value },
+        };
+    }
 };
 
 fn writeValue(writer: anytype, value: anytype) !void {
@@ -81,8 +91,8 @@ test "writeValue" {
     try testing.expectEqualStrings(buffer.items, "Variant{ .uint = 84200 }");
     buffer.clearRetainingCapacity();
 
-    try writeValue(writer, Variant{ .double = -2.400 });
-    try testing.expectEqualStrings(buffer.items, "Variant{ .double = -2.4 }");
+    try writeValue(writer, Variant{ .float = -2.400 });
+    try testing.expectEqualStrings(buffer.items, "Variant{ .float = -2.4 }");
     buffer.clearRetainingCapacity();
 
     try writeValue(writer, Variant{ .string = "string" });
@@ -90,32 +100,39 @@ test "writeValue" {
     buffer.clearRetainingCapacity();
 }
 
-const Setting = struct {
-    []const u8, // Name
-    []const u8, // Description
-    Variant, // Default value
+const Field = struct {
+    name: []const u8,
+    description: []const u8,
+    default: Variant,
 };
 
 const Schema = struct {
     filename: []const u8,
-    settings: []const Setting,
+    fields: []const Field,
 
-    fn factory(filename: []const u8, settings: []const Setting) Schema {
-        return .{
+    fn factory(filename: []const u8, settings: anytype) Schema {
+        const fields = comptime init: {
+            var rows: [settings.len]Field = undefined;
+            for (&rows, settings) |*row, setting| {
+                row.* = .{ .name = setting[0], .description = setting[1], .default = Variant.factory(setting[2], setting[3]) };
+            }
+            break :init rows;
+        };
+        return Schema{
             .filename = filename,
-            .settings = settings,
+            .fields = &fields,
         };
     }
 
     fn dump(self: Schema, writer: anytype) !void {
         try writer.writeAll("const settings = .{\n");
-        for (self.settings) |setting| {
+        for (self.fields) |field| {
             try writer.writeAll("    .{ ");
-            try writeValue(writer, setting[0]);
+            try writeValue(writer, field.name);
             try writer.writeAll(", ");
-            try writeValue(writer, setting[1]);
+            try writeValue(writer, field.description);
             try writer.writeAll(", ");
-            try writeValue(writer, setting[2]);
+            try writeValue(writer, field.default);
             try writer.writeAll(" },\n");
         }
         try writer.writeAll("};\n");
@@ -124,17 +141,17 @@ const Schema = struct {
 
 pub fn main() !void {
     const settings = .{
-        .{ "Bool_true", "True value", Variant{ .boolean = true } },
-        .{ "Bool_false", "False value", Variant{ .boolean = false } },
-        .{ "I32_12", "12 signed 32 bits", Variant{ .int = 123 } },
-        .{ "I32__23", "-23 signed 32 bits", Variant{ .int = -123 } },
-        .{ "U32_0", "0 unsigned 32 bits", Variant{ .uint = 0 } },
-        .{ "U32_34", "34 unsigned 32 bits", Variant{ .uint = 34 } },
-        .{ "Double_56", "5.6 double", Variant{ .double = 5.6 } },
-        .{ "Double__78", "-7.8 double", Variant{ .double = -7.8 } },
-        .{ "Empty", "Empty string", Variant{ .string = "" } },
-        .{ "String", "Generic string value", Variant{ .string = "String" } },
+        .{ "Bool_true", "True value", bool, true },
+        .{ "Bool_false", "False value", bool, false },
+        .{ "I32_12", "12 signed 32 bits", i16, 123 },
+        .{ "I32__23", "-23 signed 32 bits", i32, -123 },
+        .{ "U32_0", "0 unsigned 32 bits", u16, 0 },
+        .{ "U32_34", "34 unsigned 32 bits", u32, 34 },
+        .{ "Double_56", "5.6 float", f32, 5.6 },
+        .{ "Double__78", "-7.8 float", f64, -7.8 },
+        .{ "Empty", "Empty string", [10]u8, "" },
+        .{ "String", "Generic string value", [100]u8, "String" },
     };
-    const schema = Schema.factory("testfile", &settings);
+    const schema = Schema.factory("testfile", settings);
     try schema.dump(stdout);
 }
