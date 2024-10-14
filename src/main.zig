@@ -1,12 +1,18 @@
 const std = @import("std");
-const testing = std.testing;
 
-/// Helper function to create a struct with a set of named fields
-fn buildStruct(comptime names: [][:0]const u8, comptime types: []type) type {
-    var fields: [names.len]std.builtin.Type.StructField = undefined;
-    inline for (names, types, 0..) |name, T, i| {
+const Member = struct {
+    // 0-terminated because @Type needs that
+    name: [:0]const u8,
+    type: type,
+};
+
+/// Helper function to create a struct from a set of members
+fn buildStruct(members: []const Member) type {
+    var fields: [members.len]std.builtin.Type.StructField = undefined;
+    for (members, 0..) |member, i| {
+        const T = member.type;
         fields[i] = .{
-            .name = name,
+            .name = member.name,
             .type = T,
             .default_value = null,
             .is_comptime = false,
@@ -21,14 +27,37 @@ fn buildStruct(comptime names: [][:0]const u8, comptime types: []type) type {
     } });
 }
 
+test "buildStruct" {
+    const expect = std.testing.expect;
+    const expectEqualStrings = std.testing.expectEqualStrings;
+
+    const members = [_]Member{
+        .{ .name = "field1", .type = u8 },
+        .{ .name = "field2", .type = f64 },
+        .{ .name = "field3", .type = []const u8 },
+        .{ .name = "field4", .type = [10:0]u8 },
+    };
+
+    const test_struct = buildStruct(&members);
+
+    const fields = std.meta.fields(test_struct);
+    try expect(fields.len == 4);
+    try expectEqualStrings("field1", fields[0].name);
+    try expect(fields[0].type == u8);
+    try expectEqualStrings("field2", fields[1].name);
+    try expect(fields[1].type == f64);
+    try expectEqualStrings("field3", fields[2].name);
+    try expect(fields[2].type == []const u8);
+    try expectEqualStrings("field4", fields[3].name);
+    try expect(fields[3].type == [10:0]u8);
+}
+
 fn Schema(comptime settings: anytype) type {
-    var names: [settings.len][:0]const u8 = undefined;
-    var types: [settings.len]type = undefined;
-    inline for (settings, 0..) |setting, i| {
-        names[i] = setting[0];
-        types[i] = setting[2];
+    var members: [settings.len]Member = undefined;
+    for (settings, 0..) |setting, i| {
+        members[i] = .{ .name = setting[0], .type = setting[2] };
     }
-    const ComputedImage = buildStruct(&names, &types);
+    const ComputedImage = comptime buildStruct(&members);
     return struct {
         const Self = @This();
         pub const Image = ComputedImage;
@@ -64,9 +93,11 @@ fn Schema(comptime settings: anytype) type {
         pub fn dump(self: Self, writer: anytype) !void {
             inline for (settings) |setting| {
                 const name = setting[0];
-                try writer.writeAll(".{ \"" ++ name ++ "\", \"" ++ setting[1] ++ "\", ");
+                const description = setting[1];
+                const T = setting[2];
+                try writer.writeAll(".{ \"" ++ name ++ "\", \"" ++ description ++ "\", ");
                 const value = @field(self.image, name);
-                switch (@typeInfo(setting[2])) {
+                switch (@typeInfo(T)) {
                     .Bool => try writer.writeAll(if (value) "true" else "false"),
                     .Int, .Float => try writer.print("{d}", .{value}),
                     else => {
