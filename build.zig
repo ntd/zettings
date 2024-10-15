@@ -16,8 +16,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
-        .name = "zettings",
-        .root_source_file = b.path("src/main.zig"),
+        .name = "zettings-demo",
+        .root_source_file = b.path("src/demo.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -51,7 +51,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/Zettings.zig"),
         .target = target,
         .optimize = optimize,
     });

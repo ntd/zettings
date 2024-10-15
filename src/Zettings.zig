@@ -64,7 +64,7 @@ pub const SchemaError = error{
     FileAlreadyMmapped,
 };
 
-fn Schema(comptime settings: anytype) type {
+pub fn Schema(comptime settings: anytype) type {
     var members: [settings.len]Member = undefined;
     for (settings, 0..) |setting, i| {
         members[i] = .{ .name = setting[0], .type = setting[2] };
@@ -302,37 +302,4 @@ test "Schema.mmap" {
     buffer.clearRetainingCapacity();
 
     try posix.unlink(filepath);
-}
-
-pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-
-    const settings = .{
-        .{ "TRUE", "True boolean value", bool, true },
-        .{ "FALSE", "False boolean value", bool, false },
-        .{ "I16", "Signed integer (16 bits)", i16, 123 },
-        .{ "I32", "Signed integer (32 bits)", i32, -123 },
-        .{ "U16", "Unsigned integer (16 bits)", u16, 0 },
-        .{ "U32", "Unsigned integer (32 bits)", u32, 34 },
-        .{ "F32", "Floating point (32 bits)", f32, 5.6 },
-        .{ "F64", "Floating point (64 bits)", f64, -7.8 },
-        .{ "EMPTY", "Empty string", [10:0]u8, "" },
-        .{ "STRING", "Valorized string", [100:0]u8, "String" },
-    };
-    var schema2 = Schema(.{.{ "TRUE", "Boolean value", bool, true }}).init("/tmp/testfile2");
-    try schema2.dump(stdout);
-
-    var schema = Schema(settings).init("/tmp/testfile");
-    defer schema.deinit();
-
-    try schema.reset();
-    try schema.mmap();
-    try schema.dump(stdout);
-
-    //// Try changing some fields and see if dump works as expected
-    try stdout.writeByte('\n');
-    schema.image.?.TRUE = false;
-    schema.image.?.FALSE = true;
-    schema.image.?.STRING[0] = 0;
-    try schema.dump(stdout);
 }
