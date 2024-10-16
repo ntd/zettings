@@ -45,7 +45,7 @@ test "buildStruct" {
     const members = [_]Member{
         .{ .name = "field1", .type = u8 },
         .{ .name = "field2", .type = f64 },
-        .{ .name = "field3", .type = []const u8 },
+        .{ .name = "field3", .type = [50]u8 },
         .{ .name = "field4", .type = [10:0]u8 },
     };
 
@@ -58,7 +58,7 @@ test "buildStruct" {
     try expectEqualStrings("field2", fields[1].name);
     try expect(fields[1].type == f64);
     try expectEqualStrings("field3", fields[2].name);
-    try expect(fields[2].type == []const u8);
+    try expect(fields[2].type == [50]u8);
     try expectEqualStrings("field4", fields[3].name);
     try expect(fields[3].type == [10:0]u8);
 }
