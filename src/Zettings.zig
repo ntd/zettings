@@ -30,9 +30,12 @@ fn buildStruct(members: []const Member) type {
             .alignment = if (@sizeOf(T) > 0) @alignOf(T) else 0,
         };
     }
+    // It would be better to have a packed struct, but up to know in Zig
+    // you can't have array inside packed structs:
+    // https://github.com/ziglang/zig/issues/12547
     return @Type(.{ .Struct = .{
         .is_tuple = false,
-        .layout = .auto,
+        .layout = .@"extern",
         .fields = &fields,
         .decls = &.{},
     } });
