@@ -97,8 +97,6 @@ pub fn Schema(comptime settings: anytype) type {
                                 "' too big for field '" ++ name ++ "'");
                         }
                         strcpy(&@field(defaults, name), value);
-                        //@memcpy(@field(defaults, name)[0..value.len], value);
-                        //@field(defaults, name)[value.len] = 0;
                     },
                 }
             }
