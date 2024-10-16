@@ -81,6 +81,7 @@ pub fn Schema(comptime settings: anytype) type {
         defaults: Image,
         image: ?*align(std.mem.page_size) Image = null,
 
+        /// Schema initialization: remember to self.deinit() when done.
         pub fn init(filepath: []const u8) Self {
             var defaults: Image = undefined;
             inline for (settings) |setting| {
@@ -112,7 +113,7 @@ pub fn Schema(comptime settings: anytype) type {
             }
         }
 
-        /// Create or reset the file to the default image values.
+        /// Create or reset the schema file to its default values.
         pub fn reset(self: Self) !void {
             if (self.image) |_| {
                 return SchemaError.FileAlreadyMmapped;
@@ -122,6 +123,10 @@ pub fn Schema(comptime settings: anytype) type {
             file.close();
         }
 
+        /// Map the internal struct (`self.image`) to the schema file.
+        /// After that, you can access and modify the settings via
+        /// `self.image` and be sure their values will be retained in
+        /// the schema file.
         pub fn mmap(self: *Self) !void {
             const file = try std.fs.openFileAbsolute(self.filepath, .{ .mode = .read_write });
             defer file.close();
@@ -129,6 +134,9 @@ pub fn Schema(comptime settings: anytype) type {
             self.image = @ptrCast(image.ptr);
         }
 
+        /// Dump the current image values to `writer`.
+        /// The format is intentionally compatible with Zig, so you can
+        /// easily create or update Zig code by redirecting this dump.
         pub fn dump(self: Self, writer: anytype) !void {
             const image = self.image orelse &self.defaults;
             inline for (settings) |setting| {
