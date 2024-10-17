@@ -12,21 +12,21 @@ settings (boolean, numeric and string types) and allow to perform some
 basic operations from command line.
 
 ```sh
-# Build the demo program
-zig build
+# Show usage info
+zig build run -- -h
 
 # Create (-r) the schema file (demo.zettings) and dump (-d) its default values
-./zig-out/bin/zettings-demo -r -d demo.zettings
+zig build run -- -r -d demo.zettings
 
 # Toggle all booleans (-t) and dump the new values
-./zig-out/bin/zettings-demo -t -d demo.zettings
+zig build run -- -t -d demo.zettings
 
 # Now increment all numeric settings (-i) and dump the new values
-./zig-out/bin/zettings-demo -i -d demo.zettings
+zig build run -- -i -d demo.zettings
 
 # Further dumps show that the last values are retained
-./zig-out/bin/zettings-demo -d demo.zettings
+zig build run -- -d demo.zettings
 
 # Reset (-r) to the default values
-./zig-out/bin/zettings-demo -r -d demo.zettings
+zig build run -- -r -d demo.zettings
 ```
