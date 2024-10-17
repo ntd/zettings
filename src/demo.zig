@@ -38,13 +38,27 @@ fn absolutePath(allocator: std.mem.Allocator, src: []const u8) ![]u8 {
     }
 }
 
+const Actions = struct {
+    reset: bool = false,
+    toggle: bool = false,
+    increment: bool = false,
+    dump: bool = false,
+
+    pub fn todo(self: *Actions, comptime action: []const u8) bool {
+        const result = @field(self, action);
+        @field(self, action) = false;
+        return result;
+    }
+
+    pub fn pending(self: Actions) bool {
+        return self.reset or self.toggle or self.increment or self.dump;
+    }
+};
+
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     const stderr = std.io.getStdErr().writer();
-    var reset = false;
-    var toggle = false;
-    var increment = false;
-    var dump = false;
+    var actions: Actions = .{};
     var no_more_options = false;
     var filearg: ?[]const u8 = null;
 
@@ -64,13 +78,13 @@ pub fn main() !void {
             try help(cmd, stdout);
             return;
         } else if (eql(u8, arg, "-r")) {
-            reset = true;
+            actions.reset = true;
         } else if (eql(u8, arg, "-t")) {
-            toggle = true;
+            actions.toggle = true;
         } else if (eql(u8, arg, "-i")) {
-            increment = true;
+            actions.increment = true;
         } else if (eql(u8, arg, "-d")) {
-            dump = true;
+            actions.dump = true;
         } else if (eql(u8, arg, "--")) {
             no_more_options = true;
         } else {
@@ -107,24 +121,24 @@ pub fn main() !void {
     var schema = zettings.Schema(settings).init(filepath);
     defer schema.deinit();
 
-    if (reset) {
+    if (actions.todo("reset")) {
         try schema.reset();
     }
 
-    if (toggle or increment or dump) {
+    if (actions.pending()) {
         try schema.mmap();
 
-        if (toggle) {
+        if (actions.todo("toggle")) {
             schema.image.?.BOOL = !schema.image.?.BOOL;
         }
-        if (increment) {
+        if (actions.todo("increment")) {
             schema.image.?.I16 += 1;
             schema.image.?.I32 += 1;
             schema.image.?.U8 += 1;
             schema.image.?.U32 += 1;
             schema.image.?.F64 += 1;
         }
-        if (dump) {
+        if (actions.todo("dump")) {
             try schema.dump(stdout);
         }
     }
