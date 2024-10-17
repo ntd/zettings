@@ -1,5 +1,5 @@
+const config = @import("config");
 const std = @import("std");
-const eql = std.mem.eql;
 const zettings = @import("Zettings.zig");
 
 fn help(cmd: []const u8, writer: anytype) !void {
@@ -12,6 +12,7 @@ fn help(cmd: []const u8, writer: anytype) !void {
         \\  -t              Toggle boolean settings
         \\  -i              Increment numeric settings
         \\  -d              Dump the actual schema contents
+        \\  -o, --opcua     Start an OPC/UA server
         \\  -h, --help      Display this help and exit
         \\
         \\FILE is required and must be writable.
@@ -43,6 +44,7 @@ const Actions = struct {
     toggle: bool = false,
     increment: bool = false,
     dump: bool = false,
+    opcua: bool = false,
 
     pub fn todo(self: *Actions, comptime action: []const u8) bool {
         const result = @field(self, action);
@@ -51,13 +53,14 @@ const Actions = struct {
     }
 
     pub fn pending(self: Actions) bool {
-        return self.reset or self.toggle or self.increment or self.dump;
+        return self.reset or self.toggle or self.increment or self.dump or self.opcua;
     }
 };
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     const stderr = std.io.getStdErr().writer();
+    const eql = std.mem.eql;
     var actions: Actions = .{};
     var no_more_options = false;
     var filearg: ?[]const u8 = null;
@@ -85,6 +88,8 @@ pub fn main() !void {
             actions.increment = true;
         } else if (eql(u8, arg, "-d")) {
             actions.dump = true;
+        } else if (eql(u8, arg, "-o") or eql(u8, arg, "--opcua")) {
+            actions.opcua = true;
         } else if (eql(u8, arg, "--")) {
             no_more_options = true;
         } else {
@@ -125,21 +130,39 @@ pub fn main() !void {
         try schema.reset();
     }
 
-    if (actions.pending()) {
-        try schema.mmap();
+    // On no more pending actions, exit now to avoid `schema.mmap`
+    if (!actions.pending()) {
+        return;
+    }
 
-        if (actions.todo("toggle")) {
-            schema.image.?.BOOL = !schema.image.?.BOOL;
+    try schema.mmap();
+
+    if (actions.todo("toggle")) {
+        schema.image.?.BOOL = !schema.image.?.BOOL;
+    }
+
+    if (actions.todo("increment")) {
+        schema.image.?.I16 += 1;
+        schema.image.?.I32 += 1;
+        schema.image.?.U8 += 1;
+        schema.image.?.U32 += 1;
+        schema.image.?.F64 += 1;
+    }
+
+    if (actions.todo("dump")) {
+        try schema.dump(stdout);
+    }
+
+    // Leave `config.opcua` alone to skip the branch at comptime
+    if (config.opcua) {
+        if (actions.todo("opcua")) {
+            const opcua = @import("OpcUa.zig");
+            const server = opcua.Server{};
+            try server.start();
         }
-        if (actions.todo("increment")) {
-            schema.image.?.I16 += 1;
-            schema.image.?.I32 += 1;
-            schema.image.?.U8 += 1;
-            schema.image.?.U32 += 1;
-            schema.image.?.F64 += 1;
-        }
-        if (actions.todo("dump")) {
-            try schema.dump(stdout);
-        }
+    } else if (actions.pending()) {
+        try stderr.writeAll("OPC/UA server support not enabled!\n");
+        try help(cmd, stdout);
+        return error.OpcUaSupportDisabled;
     }
 }
