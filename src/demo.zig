@@ -156,13 +156,24 @@ pub fn main() !void {
     // Leave `config.opcua` alone to skip the branch at comptime
     if (config.opcua) {
         if (actions.todo("opcua")) {
-            const opcua = @import("OpcUa.zig");
-            const server = opcua.Server{};
-            try server.start();
+            try startServer();
         }
     } else if (actions.pending()) {
         try stderr.writeAll("OPC/UA server support not enabled!\n");
         try help(cmd, stdout);
         return error.OpcUaSupportDisabled;
     }
+}
+
+const opcua = @import("OpcUa.zig");
+
+fn startServer() !void {
+    const server = opcua.UA_Server_new() orelse return opcua.OPCUAError.UnableToCreateServer;
+    defer _ = opcua.UA_Server_delete(server);
+
+    const opcua_config = opcua.UA_Server_getConfig(server);
+    try opcua.fallible(opcua.UA_ServerConfig_setMinimalCustomBuffer(opcua_config, 4840, null, 0, 0));
+
+    var running = true;
+    try opcua.fallible(opcua.UA_Server_run(server, &running));
 }

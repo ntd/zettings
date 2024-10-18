@@ -1,69 +1,59 @@
 const std = @import("std");
 
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
+    const options = b.addOptions();
+    // TODO: autodetect open62541 by default instead of `orelse false`
+    const opcua = b.option(bool, "opcua", "Enable OPC/UA server support") orelse false;
+    options.addOption(bool, "opcua", opcua);
+
+    const demo = b.addExecutable(.{
         .name = "zettings-demo",
         .root_source_file = b.path("src/demo.zig"),
         .target = target,
         .optimize = optimize,
     });
-
-    const options = b.addOptions();
-    exe.root_module.addOptions("config", options);
-
-    // TODO: autodetect open62541 by default instead of `orelse false`
-    const opcua = b.option(bool, "opcua", "Enable OPC/UA server support") orelse false;
-    options.addOption(bool, "opcua", opcua);
+    demo.root_module.addOptions("config", options);
     if (opcua) {
-        exe.linkLibC();
-        exe.linkSystemLibrary("open62541");
+        demo.linkLibC();
+        demo.linkSystemLibrary("open62541");
+    }
+    b.installArtifact(demo);
+
+    if (opcua) {
+        const opcuatypes = b.addExecutable(.{
+            .name = "opcuatypes",
+            .target = target,
+            .optimize = optimize,
+        });
+        opcuatypes.addCSourceFile(.{ .file = b.path("tools/opcuatypes.c") });
+        opcuatypes.linkLibC();
+        opcuatypes.linkSystemLibrary("open62541");
+        b.installArtifact(opcuatypes);
+
+        const launch_opcuatypes = b.addRunArtifact(opcuatypes);
+        launch_opcuatypes.step.dependOn(b.getInstallStep());
+        const opcuatypes_step = b.step("opcuatypes", "Run opcuatypes app");
+        opcuatypes_step.dependOn(&launch_opcuatypes.step);
     }
 
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
-    b.installArtifact(exe);
-
-    // This *creates* a Run step in the build graph, to be executed when another
-    // step is evaluated that depends on it. The next line below will establish
-    // such a dependency.
-    const run_cmd = b.addRunArtifact(exe);
-
-    // By making the run step depend on the install step, it will be run from the
-    // installation directory rather than directly from within the cache directory.
-    // This is not necessary, however, if the application depends on other installed
-    // files, this ensures they will be present and in the expected location.
-    run_cmd.step.dependOn(b.getInstallStep());
-
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
+    const launch_demo = b.addRunArtifact(demo);
+    launch_demo.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
-        run_cmd.addArgs(args);
+        launch_demo.addArgs(args);
     }
 
-    // This creates a build step. It will be visible in the `zig build --help` menu,
-    // and can be selected like this: `zig build run`
-    // This will evaluate the `run` step rather than the default, which is "install".
     const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    run_step.dependOn(&launch_demo.step);
 
-    const exe_unit_tests = b.addTest(.{
+    const zettings_tests = b.addTest(.{
         .root_source_file = b.path("src/Zettings.zig"),
         .target = target,
         .optimize = optimize,
     });
-
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-
-    // Similar to creating the run step earlier, this exposes a `test` step to
-    // the `zig build --help` menu, providing a way for the user to request
-    // running the unit tests.
+    const run_zettings_tests = b.addRunArtifact(zettings_tests);
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
+    test_step.dependOn(&run_zettings_tests.step);
 }
