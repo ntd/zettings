@@ -11,7 +11,7 @@
 //     ...: error: opaque types have unknown size and therefore cannot be directly embedded in structs
 //     value: UA_DataValue = @import("std").mem.zeroes(UA_DataValue),
 //
-pub const c = @cImport({
+const c = @cImport({
     @cInclude("open62541/types.h");
     // See above: @cInclude("open62541/server.h");
     // See above: @cInclude("open62541/server_config_default.h");
@@ -19,11 +19,17 @@ pub const c = @cImport({
 
 // TODO: drop the following declarations and use the C imported
 // counterparts whenever Zig gains proper support for bitfields
-pub extern fn UA_Server_new() ?*c.UA_Server;
-pub extern fn UA_Server_delete(server: *c.UA_Server) c.UA_StatusCode;
-pub extern fn UA_Server_getConfig(server: *c.UA_Server) ?*c.UA_ServerConfig;
-pub extern fn UA_ServerConfig_setMinimalCustomBuffer(config: ?*c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) c.UA_StatusCode;
-pub extern fn UA_Server_run(server: *c.UA_Server, running: *bool) c.UA_StatusCode;
+pub const UA_Server = c.UA_Server;
+pub const UA_NodeId = c.UA_NodeId;
+pub const UA_StatusCode = c.UA_StatusCode;
+
+pub extern fn UA_Server_new() ?*UA_Server;
+pub extern fn UA_Server_delete(server: *UA_Server) UA_StatusCode;
+pub extern fn UA_Server_run(server: *UA_Server, running: *bool) UA_StatusCode;
+
+// Not exposed: use `serverConfigure()` instead
+extern fn UA_Server_getConfig(server: *UA_Server) ?*c.UA_ServerConfig;
+extern fn UA_ServerConfig_setMinimalCustomBuffer(config: ?*c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) UA_StatusCode;
 
 // TODO: provide more detailed error codes
 pub const OPCUAError = error{
@@ -31,8 +37,17 @@ pub const OPCUAError = error{
     BadStatusCode,
 };
 
-pub fn fallible(status: c.UA_StatusCode) !void {
+pub fn fallible(status: UA_StatusCode) !void {
     if (c.UA_StatusCode_isBad(status)) {
         return OPCUAError.BadStatusCode;
     }
+}
+
+pub const Configuration = struct {
+    portNumber: u16 = 4840,
+};
+
+pub fn serverConfigure(server: *UA_Server, configuration: Configuration) !void {
+    const opcua_config = UA_Server_getConfig(server);
+    try fallible(UA_ServerConfig_setMinimalCustomBuffer(opcua_config, configuration.portNumber, null, 0, 0));
 }

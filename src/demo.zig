@@ -171,9 +171,7 @@ fn startServer() !void {
     const server = opcua.UA_Server_new() orelse return opcua.OPCUAError.UnableToCreateServer;
     defer _ = opcua.UA_Server_delete(server);
 
-    const opcua_config = opcua.UA_Server_getConfig(server);
-    try opcua.fallible(opcua.UA_ServerConfig_setMinimalCustomBuffer(opcua_config, 4840, null, 0, 0));
-
+    try opcua.serverConfigure(server, .{});
     var running = true;
     try opcua.fallible(opcua.UA_Server_run(server, &running));
 }
