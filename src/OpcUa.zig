@@ -17,6 +17,7 @@ const expectEqualSlices = std.testing.expectEqualSlices;
 //
 const c = @cImport({
     @cInclude("open62541/types.h");
+    @cInclude("open62541/util.h");
     // See above: @cInclude("open62541/server.h");
     // See above: @cInclude("open62541/server_config_default.h");
 });
@@ -137,6 +138,13 @@ pub extern fn UA_Server_run(server: *UA_Server, running: *bool) UA_StatusCode;
 extern fn UA_Server_getConfig(server: *UA_Server) ?*c.UA_ServerConfig;
 extern fn UA_ServerConfig_setMinimalCustomBuffer(config: ?*c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) UA_StatusCode;
 
+// Not exposed: use `createFolder()` instead
+extern fn __UA_Server_addNode(server: *UA_Server, nodeClass: c.UA_NodeClass, requestedNewNodeId: ?*const UA_NodeId, parentNodeId: ?*const UA_NodeId, referenceTypeId: ?*const UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: ?*const UA_NodeId, attr: ?*const c.UA_NodeAttributes, attributeType: *const UA_DataType, nodeContext: ?*anyopaque, outNewNodeId: ?*UA_NodeId) UA_StatusCode;
+
+// Not exposed: use `bindVariable()` instead
+extern fn UA_Server_addDataSourceVariableNode(server: *UA_Server, requestedNewNodeId: UA_NodeId, parentNodeId: UA_NodeId, referenceTypeId: UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: UA_NodeId, attrs: c.UA_VariableAttributes, dataSource: c.UA_DataSource, nodeContext: ?*anyopaque, outNewNodeId: *UA_NodeId) UA_StatusCode;
+extern fn UA_Variant_setScalarCopy(v: *c.UA_Variant, p: *const anyopaque, type: *const UA_DataType) UA_StatusCode;
+
 // TODO: provide more detailed error codes
 pub const OPCUAError = error{
     UnableToCreateServer,
@@ -156,4 +164,18 @@ pub const Configuration = struct {
 pub fn serverConfigure(server: *UA_Server, configuration: Configuration) !void {
     const opcua_config = UA_Server_getConfig(server);
     try fallible(UA_ServerConfig_setMinimalCustomBuffer(opcua_config, configuration.portNumber, null, 0, 0));
+}
+
+/// Create a bare folder under Root/Objects
+pub fn createFolder(server: *UA_Server, name: []const u8, namespace: u16) !UA_NodeId {
+    const parentNodeId = c.UA_NODEID_NUMERIC(0, c.UA_NS0ID_OBJECTSFOLDER);
+    const referenceTypeId = c.UA_NODEID_NUMERIC(0, c.UA_NS0ID_ORGANIZES);
+    const browseName = c.UA_QUALIFIEDNAME(namespace, @constCast(name.ptr));
+    const typeDefinition = c.UA_NODEID_NUMERIC(0, c.UA_NS0ID_BASEOBJECTTYPE);
+    const attr = c.UA_ObjectAttributes_default;
+
+    var result: UA_NodeId = undefined;
+    try fallible(__UA_Server_addNode(server, c.UA_NODECLASS_OBJECT, &c.UA_NODEID_NULL, &parentNodeId, &referenceTypeId, browseName, &typeDefinition, @ptrCast(&attr), &UA_TYPES[c.UA_TYPES_OBJECTATTRIBUTES], null, &result));
+
+    return result;
 }

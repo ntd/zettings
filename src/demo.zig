@@ -165,11 +165,13 @@ pub fn main() !void {
     }
 }
 
-const opcua = @import("OpcUa.zig");
-
 fn startServer() !void {
+    const opcua = @import("OpcUa.zig");
     const server = opcua.UA_Server_new() orelse return opcua.OPCUAError.UnableToCreateServer;
     defer _ = opcua.UA_Server_delete(server);
+
+    const folder = try opcua.createFolder(server, "Zettings", 1);
+    _ = folder;
 
     try opcua.serverConfigure(server, .{});
     var running = true;

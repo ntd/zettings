@@ -36,6 +36,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    zettings_tests.root_module.addOptions("config", options);
 
     const run_zettings_tests = b.addRunArtifact(zettings_tests);
     const test_step = b.step("test", "Run unit tests");
