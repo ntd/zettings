@@ -22,6 +22,25 @@ pub fn build(b: *std.Build) void {
     }
     b.installArtifact(demo);
 
+    const launch_demo = b.addRunArtifact(demo);
+    launch_demo.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        launch_demo.addArgs(args);
+    }
+
+    const run_step = b.step("run", "Run the app");
+    run_step.dependOn(&launch_demo.step);
+
+    const zettings_tests = b.addTest(.{
+        .root_source_file = b.path("src/Zettings.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const run_zettings_tests = b.addRunArtifact(zettings_tests);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_zettings_tests.step);
+
     if (opcua) {
         const opcuatypes = b.addExecutable(.{
             .name = "opcuatypes",
@@ -37,23 +56,15 @@ pub fn build(b: *std.Build) void {
         launch_opcuatypes.step.dependOn(b.getInstallStep());
         const opcuatypes_step = b.step("opcuatypes", "Run opcuatypes app");
         opcuatypes_step.dependOn(&launch_opcuatypes.step);
+
+        const opcua_tests = b.addTest(.{
+            .root_source_file = b.path("src/OpcUa.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        opcua_tests.linkLibC();
+        opcua_tests.linkSystemLibrary("open62541");
+        const run_opcua_tests = b.addRunArtifact(opcua_tests);
+        test_step.dependOn(&run_opcua_tests.step);
     }
-
-    const launch_demo = b.addRunArtifact(demo);
-    launch_demo.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        launch_demo.addArgs(args);
-    }
-
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&launch_demo.step);
-
-    const zettings_tests = b.addTest(.{
-        .root_source_file = b.path("src/Zettings.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const run_zettings_tests = b.addRunArtifact(zettings_tests);
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_zettings_tests.step);
 }
