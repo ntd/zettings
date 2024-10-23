@@ -1,16 +1,8 @@
 #include <stdio.h>
 #include "zigc.h"
 
-uint32_t UA_Server_addDataSourceVariableNode(void *server,
-                                             const UA_NodeId requestedNewNodeId,
-                                             const UA_NodeId parentNodeId,
-                                             const UA_NodeId referenceTypeId,
-                                             const UA_QualifiedName browseName,
-                                             const UA_NodeId typeDefinition,
-                                             const UA_VariableAttributes attr,
-                                             const UA_DataSource dataSource,
-                                             void *nodeContext, UA_NodeId *outNewNodeId)
+void cFunction(Pad24 pad1, Pad24 pad2, Pad24 pad3, Pad24 pad4, Pad24 pad5,
+               Pad16 pad6, void *sentinel)
 {
-    printf("We are inside %s now: outNewNodeId is '%p'!\n", __func__, outNewNodeId);
-    return 0;
+    printf("We are inside %s now: sentinel is '%p'!\n", __func__, sentinel);
 }

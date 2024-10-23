@@ -4,10 +4,8 @@ const c = @cImport({
 });
 
 pub fn main() !void {
-    const node = std.mem.zeroes(c.UA_NodeId);
-    const name = std.mem.zeroes(c.UA_QualifiedName);
-    const attr = std.mem.zeroes(c.UA_VariableAttributes);
-    const ds = std.mem.zeroes(c.UA_DataSource);
-    const outNewNodeId: *c.UA_NodeId = @ptrFromInt(0xC0FEE000);
-    _ = c.UA_Server_addDataSourceVariableNode(null, node, node, node, name, node, attr, ds, null, outNewNodeId);
+    const pad24 = std.mem.zeroes(c.Pad24);
+    const pad16 = std.mem.zeroes(c.Pad16);
+    const sentinel: *anyopaque = @ptrFromInt(0xC0FEE000);
+    c.cFunction(pad24, pad24, pad24, pad24, pad24, pad16, sentinel);
 }
