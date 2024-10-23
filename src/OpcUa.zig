@@ -47,7 +47,10 @@ const UA_DataType = extern struct {
 extern const UA_TYPES: [c.UA_TYPES_COUNT]UA_DataType;
 
 // XXX: workaround for accessing bitfields in Zig
-fn dtFlags(dt: *UA_DataType) *UA_DataTypeFlags {
+fn dtRead(dt: *const UA_DataType) *const UA_DataTypeFlags {
+    return @ptrCast(&dt.flags);
+}
+fn dtWrite(dt: *UA_DataType) *UA_DataTypeFlags {
     return @ptrCast(&dt.flags);
 }
 
@@ -57,10 +60,10 @@ test "UA_DataType" {
 
     var dt = std.mem.zeroes(UA_DataType);
     dt.typeName = @ptrFromInt(0x89ABCDEF);
-    dtFlags(&dt).memSize = 0x1234;
-    dtFlags(&dt).typeKind = 10;
-    dtFlags(&dt).overlayable = 1;
-    dtFlags(&dt).membersSize = 0x56;
+    dtWrite(&dt).memSize = 0x1234;
+    dtWrite(&dt).typeKind = 10;
+    dtWrite(&dt).overlayable = 1;
+    dtWrite(&dt).membersSize = 0x56;
     dt.members = @ptrFromInt(0xFEDCBA98);
 
     const expected: []const u8 = &.{
@@ -97,7 +100,10 @@ const UA_DataValue = extern struct {
 };
 
 // XXX: workaround for accessing bitfields in Zig
-fn dvFlags(dv: *UA_DataValue) *UA_DataValueFlags {
+fn dvRead(dv: *const UA_DataValue) *const UA_DataValueFlags {
+    return @ptrCast(&dv.flags);
+}
+fn dvWrite(dv: *UA_DataValue) *UA_DataValueFlags {
     return @ptrCast(&dv.flags);
 }
 
@@ -111,9 +117,9 @@ test "UA_DataValue" {
     dv.sourcePicoseconds = 0x1234;
     dv.serverPicoseconds = 0x5678;
     dv.status = 0x09ABCDEF;
-    dvFlags(&dv).hasStatus = 1;
-    dvFlags(&dv).hasServerTimestamp = 1;
-    dvFlags(&dv).hasSourcePicoseconds = 1;
+    dvWrite(&dv).hasStatus = 1;
+    dvWrite(&dv).hasServerTimestamp = 1;
+    dvWrite(&dv).hasSourcePicoseconds = 1;
 
     const expected: []const u8 = &.{
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
