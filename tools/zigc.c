@@ -1,7 +1,6 @@
 #include "zigc.h"
 
-int cFunction(Pad24 pad1, Pad24 pad2, Pad24 pad3, Pad24 pad4, Pad24 pad5,
-              Pad16 pad6, int sentinel)
+int cFunction(Pad24 a, Pad24 b, Pad24 c, Pad24 d, Pad24 e, Pad16 f, int sentinel)
 {
     return sentinel;
 }
