@@ -6,10 +6,9 @@ const c = @cImport({
 pub fn main() !void {
     const pad24 = std.mem.zeroes(c.Pad24);
     const pad16 = std.mem.zeroes(c.Pad16);
-    const expected = 0xC0FEE000;
-    const sentinel: *anyopaque = @ptrFromInt(expected);
 
-    const actual = c.cFunction(pad24, pad24, pad24, pad24, pad24, pad16, sentinel);
-    // Expected: 0xC0FEE000, actual 0x0
-    std.debug.print("Expected: 0x{X}, actual 0x{X}\n", .{ expected, actual });
+    const expected: c_int = 1234;
+    const actual = c.cFunction(pad24, pad24, pad24, pad24, pad24, pad16, expected);
+    // Expected: 1234, actual 0
+    std.debug.print("Expected: {d}, actual {d}\n", .{ expected, actual });
 }
