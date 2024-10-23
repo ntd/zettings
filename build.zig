@@ -68,4 +68,22 @@ pub fn build(b: *std.Build) void {
         const run_opcua_tests = b.addRunArtifact(opcua_tests);
         test_step.dependOn(&run_opcua_tests.step);
     }
+
+    const libzigc = b.addStaticLibrary(.{
+        .name = "zigc",
+        .target = target,
+        .optimize = optimize,
+    });
+    libzigc.linkLibC();
+    libzigc.addCSourceFile(.{ .file = b.path("tools/zigc.c") });
+
+    const zigc = b.addExecutable(.{
+        .name = "zigc",
+        .root_source_file = b.path("tools/zigc.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    zigc.linkLibrary(libzigc);
+    zigc.addAfterIncludePath(b.path("tools/"));
+    b.installArtifact(zigc);
 }
