@@ -107,14 +107,14 @@ pub fn Schema(comptime settings: anytype) type {
             };
         }
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *const Self) void {
             if (self.image) |image| {
                 posix.munmap(std.mem.asBytes(image));
             }
         }
 
         /// Create or reset the schema file to its default values.
-        pub fn reset(self: Self) !void {
+        pub fn reset(self: *const Self) !void {
             if (self.image) |_| {
                 return SchemaError.FileAlreadyMmapped;
             }
@@ -137,7 +137,7 @@ pub fn Schema(comptime settings: anytype) type {
         /// Dump the current image values to `writer`.
         /// The format is intentionally compatible with Zig, so you can
         /// easily create or update Zig code by redirecting this dump.
-        pub fn dump(self: Self, writer: anytype) !void {
+        pub fn dump(self: *const Self, writer: anytype) !void {
             const image = self.image orelse &self.defaults;
             inline for (settings) |setting| {
                 const name = setting[0];
