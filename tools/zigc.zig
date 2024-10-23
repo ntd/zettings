@@ -8,5 +8,6 @@ pub fn main() !void {
     const name = std.mem.zeroes(c.UA_QualifiedName);
     const attr = std.mem.zeroes(c.UA_VariableAttributes);
     const ds = std.mem.zeroes(c.UA_DataSource);
-    _ = c.UA_Server_addDataSourceVariableNode(null, node, node, node, name, node, attr, ds, null, null);
+    const outNewNodeId: *c.UA_NodeId = @ptrFromInt(0xC0FEE000);
+    _ = c.UA_Server_addDataSourceVariableNode(null, node, node, node, name, node, attr, ds, null, outNewNodeId);
 }

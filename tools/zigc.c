@@ -11,6 +11,6 @@ uint32_t UA_Server_addDataSourceVariableNode(void *server,
                                              const UA_DataSource dataSource,
                                              void *nodeContext, UA_NodeId *outNewNodeId)
 {
-    printf("We are inside %s now!\n", __func__);
+    printf("We are inside %s now: outNewNodeId is '%p'!\n", __func__, outNewNodeId);
     return 0;
 }
