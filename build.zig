@@ -76,7 +76,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     zigc.addCSourceFile(.{ .file = b.path("tools/zigc.c") });
-    zigc.linkLibC();
     zigc.addAfterIncludePath(b.path("tools/"));
     b.installArtifact(zigc);
 }
