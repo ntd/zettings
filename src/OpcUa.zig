@@ -142,18 +142,19 @@ pub extern fn UA_Server_run(server: *UA_Server, running: *bool) callconv(.C) UA_
 
 // Not exposed: use `serverConfigure()` instead
 extern fn UA_Server_getConfig(server: *UA_Server) callconv(.C) ?*c.UA_ServerConfig;
-extern fn UA_ServerConfig_setMinimalCustomBuffer(config: ?*c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) callconv(.C) UA_StatusCode;
+extern fn UA_ServerConfig_setMinimalCustomBuffer(config: *c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) callconv(.C) UA_StatusCode;
 
 // Not exposed: use `createFolder()` instead
-extern fn __UA_Server_addNode(server: *UA_Server, nodeClass: c.UA_NodeClass, requestedNewNodeId: ?*const UA_NodeId, parentNodeId: ?*const UA_NodeId, referenceTypeId: ?*const UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: ?*const UA_NodeId, attr: ?*const c.UA_NodeAttributes, attributeType: *const UA_DataType, nodeContext: ?*anyopaque, outNewNodeId: ?*UA_NodeId) callconv(.C) UA_StatusCode;
+extern fn __UA_Server_addNode(server: *UA_Server, nodeClass: c.UA_NodeClass, requestedNewNodeId: *const UA_NodeId, parentNodeId: *const UA_NodeId, referenceTypeId: *const UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: *const UA_NodeId, attr: *const c.UA_NodeAttributes, attributeType: *const UA_DataType, nodeContext: ?*anyopaque, outNewNodeId: ?*UA_NodeId) callconv(.C) UA_StatusCode;
 
-// Not exposed: use `bindVariable()` instead
-extern fn UA_Server_addDataSourceVariableNode(server: *UA_Server, requestedNewNodeId: UA_NodeId, parentNodeId: UA_NodeId, referenceTypeId: UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: UA_NodeId, attrs: c.UA_VariableAttributes, dataSource: c.UA_DataSource, nodeContext: ?*anyopaque, outNewNodeId: *UA_NodeId) callconv(.C) UA_StatusCode;
+// Not exposed: use `bindSetting()` instead
+extern fn UA_Server_addDataSourceVariableNode(server: *UA_Server, requestedNewNodeId: UA_NodeId, parentNodeId: UA_NodeId, referenceTypeId: UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: UA_NodeId, attr: c.UA_VariableAttributes, dataSource: c.UA_DataSource, nodeContext: ?*anyopaque, outNewNodeId: ?*UA_NodeId) callconv(.C) UA_StatusCode;
 extern fn UA_Variant_setScalarCopy(v: *c.UA_Variant, p: *const anyopaque, type: *const UA_DataType) callconv(.C) UA_StatusCode;
 
 // TODO: provide more detailed error codes
 pub const OPCUAError = error{
     UnableToCreateServer,
+    InvalidServer,
     BadStatusCode,
 };
 
@@ -168,7 +169,7 @@ pub const Configuration = struct {
 };
 
 pub fn serverConfigure(server: *UA_Server, configuration: Configuration) !void {
-    const opcua_config = UA_Server_getConfig(server);
+    const opcua_config = UA_Server_getConfig(server) orelse return OPCUAError.InvalidServer;
     try fallible(UA_ServerConfig_setMinimalCustomBuffer(opcua_config, configuration.portNumber, null, 0, 0));
 }
 
