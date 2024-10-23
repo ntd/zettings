@@ -136,20 +136,20 @@ test "UA_DataValue" {
     try expectEqualSlices(u8, expected, std.mem.asBytes(&dv));
 }
 
-pub extern fn UA_Server_new() ?*UA_Server;
-pub extern fn UA_Server_delete(server: *UA_Server) UA_StatusCode;
-pub extern fn UA_Server_run(server: *UA_Server, running: *bool) UA_StatusCode;
+pub extern fn UA_Server_new() callconv(.C) ?*UA_Server;
+pub extern fn UA_Server_delete(server: *UA_Server) callconv(.C) UA_StatusCode;
+pub extern fn UA_Server_run(server: *UA_Server, running: *bool) callconv(.C) UA_StatusCode;
 
 // Not exposed: use `serverConfigure()` instead
-extern fn UA_Server_getConfig(server: *UA_Server) ?*c.UA_ServerConfig;
-extern fn UA_ServerConfig_setMinimalCustomBuffer(config: ?*c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) UA_StatusCode;
+extern fn UA_Server_getConfig(server: *UA_Server) callconv(.C) ?*c.UA_ServerConfig;
+extern fn UA_ServerConfig_setMinimalCustomBuffer(config: ?*c.UA_ServerConfig, portNumber: u16, certificate: ?*const c.UA_ByteString, sendBufferSize: u32, recvBufferSize: u32) callconv(.C) UA_StatusCode;
 
 // Not exposed: use `createFolder()` instead
-extern fn __UA_Server_addNode(server: *UA_Server, nodeClass: c.UA_NodeClass, requestedNewNodeId: ?*const UA_NodeId, parentNodeId: ?*const UA_NodeId, referenceTypeId: ?*const UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: ?*const UA_NodeId, attr: ?*const c.UA_NodeAttributes, attributeType: *const UA_DataType, nodeContext: ?*anyopaque, outNewNodeId: ?*UA_NodeId) UA_StatusCode;
+extern fn __UA_Server_addNode(server: *UA_Server, nodeClass: c.UA_NodeClass, requestedNewNodeId: ?*const UA_NodeId, parentNodeId: ?*const UA_NodeId, referenceTypeId: ?*const UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: ?*const UA_NodeId, attr: ?*const c.UA_NodeAttributes, attributeType: *const UA_DataType, nodeContext: ?*anyopaque, outNewNodeId: ?*UA_NodeId) callconv(.C) UA_StatusCode;
 
 // Not exposed: use `bindVariable()` instead
-extern fn UA_Server_addDataSourceVariableNode(server: *UA_Server, requestedNewNodeId: UA_NodeId, parentNodeId: UA_NodeId, referenceTypeId: UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: UA_NodeId, attrs: c.UA_VariableAttributes, dataSource: c.UA_DataSource, nodeContext: ?*anyopaque, outNewNodeId: *UA_NodeId) UA_StatusCode;
-extern fn UA_Variant_setScalarCopy(v: *c.UA_Variant, p: *const anyopaque, type: *const UA_DataType) UA_StatusCode;
+extern fn UA_Server_addDataSourceVariableNode(server: *UA_Server, requestedNewNodeId: UA_NodeId, parentNodeId: UA_NodeId, referenceTypeId: UA_NodeId, browseName: c.UA_QualifiedName, typeDefinition: UA_NodeId, attrs: c.UA_VariableAttributes, dataSource: c.UA_DataSource, nodeContext: ?*anyopaque, outNewNodeId: *UA_NodeId) callconv(.C) UA_StatusCode;
+extern fn UA_Variant_setScalarCopy(v: *c.UA_Variant, p: *const anyopaque, type: *const UA_DataType) callconv(.C) UA_StatusCode;
 
 // TODO: provide more detailed error codes
 pub const OPCUAError = error{
