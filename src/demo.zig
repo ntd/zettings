@@ -70,7 +70,7 @@ pub fn main() !void {
 
     while (args.next()) |arg| {
         if (no_more_options or arg[0] != '-') {
-            if (filearg) |_| {
+            if (filearg != null) {
                 try stderr.writeAll("Too many schema files!\n");
                 try help(cmd, stdout);
                 return error.TooManyFiles;

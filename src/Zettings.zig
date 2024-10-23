@@ -115,7 +115,7 @@ pub fn Schema(comptime settings: anytype) type {
 
         /// Create or reset the schema file to its default values.
         pub fn reset(self: *const Self) !void {
-            if (self.image) |_| {
+            if (self.image != null) {
                 return SchemaError.FileAlreadyMmapped;
             }
             const file = try std.fs.createFileAbsolute(self.filepath, .{ .truncate = true, .exclusive = false, .mode = 0o660 });
