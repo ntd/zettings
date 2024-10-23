@@ -120,8 +120,8 @@ pub fn main() !void {
         .{ "U8", "A byte", u8, 253 },
         .{ "U32", "Unsigned integer (32 bits)", u32, 34 },
         .{ "F64", "Floating point (64 bits)", f64, -7.8 },
-        .{ "EMPTY", "Empty string", [10:0]u8, "" },
-        .{ "STRING", "Valorized string", [100:0]u8, "String" },
+        //.{ "EMPTY", "Empty string", [10:0]u8, "" },
+        //.{ "STRING", "Valorized string", [100:0]u8, "String" },
     };
     var schema = zettings.Schema(settings).init(filepath);
     defer schema.deinit();
@@ -156,24 +156,21 @@ pub fn main() !void {
     // Leave `config.opcua` alone to skip the branch at comptime
     if (config.opcua) {
         if (actions.todo("opcua")) {
-            try startServer();
+            const opcua = @import("OpcUa.zig");
+            const server = opcua.UA_Server_new() orelse return opcua.OPCUAError.UnableToCreateServer;
+            defer _ = opcua.UA_Server_delete(server);
+
+            try opcua.serverConfigure(server, .{});
+
+            const folder = try opcua.createFolder(server, "Zettings", 1);
+            try schema.register(server, folder);
+
+            var running = true;
+            try opcua.fallible(opcua.UA_Server_run(server, &running));
         }
     } else if (actions.pending()) {
         try stderr.writeAll("OPC/UA server support not enabled!\n");
         try help(cmd, stdout);
         return error.OpcUaSupportDisabled;
     }
-}
-
-fn startServer() !void {
-    const opcua = @import("OpcUa.zig");
-    const server = opcua.UA_Server_new() orelse return opcua.OPCUAError.UnableToCreateServer;
-    defer _ = opcua.UA_Server_delete(server);
-
-    const folder = try opcua.createFolder(server, "Zettings", 1);
-    _ = folder;
-
-    try opcua.serverConfigure(server, .{});
-    var running = true;
-    try opcua.fallible(opcua.UA_Server_run(server, &running));
 }

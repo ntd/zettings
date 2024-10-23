@@ -1,3 +1,4 @@
+const config = @import("config");
 const std = @import("std");
 const expect = std.testing.expect;
 const expectEqualStrings = std.testing.expectEqualStrings;
@@ -64,6 +65,7 @@ test "buildStruct" {
 }
 
 pub const SchemaError = error{
+    FileNotMmapped,
     FileAlreadyMmapped,
 };
 
@@ -156,6 +158,19 @@ pub fn Schema(comptime settings: anytype) type {
                 try writer.writeAll(" },\n");
             }
         }
+
+        pub usingnamespace if (config.opcua) struct {
+            const opcua = @import("OpcUa.zig");
+            pub fn register(self: *Self, server: *opcua.UA_Server, folder: opcua.UA_NodeId) !void {
+                if (self.image == null) {
+                    return SchemaError.FileNotMmapped;
+                }
+                inline for (settings) |setting| {
+                    const name = setting[0];
+                    try opcua.bindSetting(server, folder, name, setting[1], setting[2], &@field(self.image.?, name));
+                }
+            }
+        } else struct {};
     };
 }
 
