@@ -1,6 +1,7 @@
 const config = @import("config");
 const std = @import("std");
 const zettings = @import("Zettings.zig");
+const opcua = @import("OpcUa.zig");
 
 fn help(cmd: []const u8, writer: anytype) !void {
     try writer.print("Usage: {s} [OPTION]... FILE\n", .{cmd});
@@ -153,10 +154,9 @@ pub fn main() !void {
         try schema.dump(stdout);
     }
 
-    // Leave `config.opcua` alone to skip the branch at comptime
+    // Leave `config.opcua` alone to skip this branch at comptime
     if (config.opcua) {
         if (actions.todo("opcua")) {
-            const opcua = @import("OpcUa.zig");
             const server = opcua.UA_Server_new() orelse return opcua.OPCUAError.UnableToCreateServer;
             defer _ = opcua.UA_Server_delete(server);
 
