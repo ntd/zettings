@@ -1,5 +1,6 @@
 const config = @import("config");
 const std = @import("std");
+const opcua = @import("OpcUa.zig");
 const expect = std.testing.expect;
 const expectEqualStrings = std.testing.expectEqualStrings;
 const posix = std.posix;
@@ -159,18 +160,15 @@ pub fn Schema(comptime settings: anytype) type {
             }
         }
 
-        pub usingnamespace if (config.opcua) struct {
-            const opcua = @import("OpcUa.zig");
-            pub fn register(self: *Self, server: *opcua.UA_Server, folder: opcua.UA_NodeId) !void {
-                if (self.image == null) {
-                    return SchemaError.FileNotMmapped;
-                }
-                inline for (settings) |setting| {
-                    const name = setting[0];
-                    try opcua.bindSetting(server, folder, name, setting[1], setting[2], &@field(self.image.?, name));
-                }
+        pub fn register(self: *Self, server: *opcua.UA_Server, folder: opcua.UA_NodeId) !void {
+            if (self.image == null) {
+                return SchemaError.FileNotMmapped;
             }
-        } else struct {};
+            inline for (settings) |setting| {
+                const name = setting[0];
+                try opcua.bindSetting(server, folder, name, setting[1], setting[2], &@field(self.image.?, name));
+            }
+        }
     };
 }
 
