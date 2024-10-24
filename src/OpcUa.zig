@@ -273,49 +273,22 @@ pub fn bindSetting(server: *UA_Server, folder: UA_NodeId, name: []const u8, desc
     const browse = c.UA_QUALIFIEDNAME(folder.namespaceIndex, cname);
     const definition = c.UA_NODEID_NUMERIC(0, c.UA_NS0ID_BASEDATAVARIABLETYPE);
 
-    const callbacks = getCallbacks(T);
-    const dataSource: c.UA_DataSource = .{
-        .read = callbacks.read,
-        .write = callbacks.write,
-    };
-
     var attr = c.UA_VariableAttributes_default;
     attr.accessLevel = c.UA_ACCESSLEVELMASK_READ | c.UA_ACCESSLEVELMASK_WRITE;
     attr.displayName = c.UA_LOCALIZEDTEXT(null, cname);
     attr.description = c.UA_LOCALIZEDTEXT(null, cdescription);
     attr.dataType = getDataType(T).typeId;
 
-    // For some reason there is a crash when adding the DataSource
-    // variable node. Some facts emerged during the investigation:
+    // Actually I am just adding the variable node without binding the
+    // value to the mmapped image. When ziglang/zig#21783 is resolved,
+    // remove the `__UA_Server_addNode` call and uncomment following.
     //
-    // - UA_Server_addDataSourceVariableNode is a memory hog: it
-    //   requires, on my x86_64 system, 360 bytes of stack memory:
-    //   8 + 24 + 24 + 24 + 24 + 24 + 200 + 16 + 8 + 8 = 360
+    // const callbacks = getCallbacks(T);
+    // const dataSource: c.UA_DataSource = .{
+    //     .read = callbacks.read,
+    //     .write = callbacks.write,
+    // };
     //
-    // - if I pass an invalid `node`, e.g. by assigning to ita duplicate
-    //   node such as `UA_NODEID_NUMERIC(0, 1)`, the call returns with
-    //   an error and no corruption occurs
-    //
-    // - I added a breakpoint to `UA_Server_addDataSourceVariableNode`:
-    //   argument inspection showed that everything up to `attr` seems
-    //   correct and everything after it (`dataSource`, `nodeContext`
-    //   and `outNewNodeId`) is corrupted
-    //
-    // - I checked the size of all arguments and they match their C
-    //   counterparts
-    //
-    // - I tried to change, inspect and feed many different arguments
-    //   but the crash is always the same
-    //
-    // - I even tried to replicate the same crash in a MCVE to see if
-    //   there is some kind of bug between Zig/C boundaries, but in that
-    //   code everything works fine: see `tools/zigc.zig` for details
-    //
-    // - According to this issue:
-    //   https://github.com/open62541/open62541/issues/705
-    //   I can use `UA_Server_addVariableNode` and
-    //   `UA_Server_setVariableNode_valueCallback` to achieve the same
-    //   results, so this is likely my next step
-    //
-    try fallible(UA_Server_addDataSourceVariableNode(server, node, folder, reference, browse, definition, attr, dataSource, dst, null));
+    //try fallible(UA_Server_addDataSourceVariableNode(server, node, folder, reference, browse, definition, attr, dataSource, dst, null));
+    try fallible(__UA_Server_addNode(server, c.UA_NODECLASS_VARIABLE, &node, &folder, &reference, browse, &definition, @ptrCast(&attr), &UA_TYPES[c.UA_TYPES_VARIABLEATTRIBUTES], dst, null));
 }
